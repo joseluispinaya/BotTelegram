@@ -70,11 +70,10 @@ async function analizarTendencias() {
             .from('interacciones')
             .select('mensaje_usuario')
             .order('fecha_creacion', { ascending: false })
-            .limit(20);
+            .limit(10);
 
         if (errInt) throw errInt;
 
-        // Si no hay suficientes interacciones, retornamos un arreglo vacío
         if (!interacciones || interacciones.length === 0) return [];
 
         // 2. Obtener las categorías actuales de la base de conocimiento
@@ -88,9 +87,12 @@ async function analizarTendencias() {
         const listaMensajes = interacciones.map(i => i.mensaje_usuario).join(' | ');
         const listaCategorias = categorias.map(c => c.categoria).join(', ');
 
+        // PROMPT MEJORADO: Instrucciones más estrictas sobre la agrupación
         const promptSistema = `Eres un analista de datos experto. Tienes una lista de mensajes de usuarios separados por el carácter '|', y una lista de categorías válidas: [${listaCategorias}]. 
         Tu tarea es leer cada mensaje, clasificarlo en la categoría que mejor corresponda y contar cuántos mensajes pertenecen a cada categoría. 
-        Si un mensaje no encaja en ninguna, clasifícalo como "OTROS".
+        Si un mensaje no encaja en ninguna, clasifícalo estrictamente como "OTROS".
+        
+        REGLA VITAL: Agrupa los resultados. Ninguna categoría debe repetirse en tu respuesta. Suma las cantidades de las categorías iguales. La categoría "OTROS" (y cualquier otra) debe aparecer una sola vez con la cantidad total acumulada.
         
         Responde ÚNICAMENTE con un arreglo en formato JSON válido con esta estructura exacta: 
         [{"categoria": "NOMBRE", "cantidad": numero}]
@@ -104,7 +106,7 @@ async function analizarTendencias() {
                     { role: 'system', content: promptSistema },
                     { role: 'user', content: `Mensajes a analizar: ${listaMensajes}` }
                 ],
-                temperature: 0.1 // Temperatura casi en cero para evitar que invente formatos
+                temperature: 0.1 
             },
             {
                 headers: {
@@ -114,13 +116,29 @@ async function analizarTendencias() {
             }
         );
 
-        // Transformamos el string de respuesta en un objeto JavaScript real
-        const resultadoJSON = JSON.parse(data.choices[0].message.content);
-        return resultadoJSON;
+        // 5. Transformamos el string de respuesta en un objeto JavaScript
+        const resultadoBrutoJSON = JSON.parse(data.choices[0].message.content);
+
+        // 6. POST-PROCESAMIENTO (El blindaje final)
+        // Por si la IA se equivoca y manda duplicados, JavaScript los suma a la fuerza.
+        const resultadoAgrupado = resultadoBrutoJSON.reduce((acumulador, itemActual) => {
+            // Buscamos si la categoría ya existe en nuestro nuevo arreglo
+            const categoriaExistente = acumulador.find(i => i.categoria === itemActual.categoria);
+            
+            if (categoriaExistente) {
+                // Si existe, solo le sumamos la cantidad
+                categoriaExistente.cantidad += itemActual.cantidad;
+            } else {
+                // Si no existe, la agregamos al arreglo
+                acumulador.push({ categoria: itemActual.categoria, cantidad: itemActual.cantidad });
+            }
+            return acumulador;
+        }, []); // [] es el valor inicial del acumulador
+
+        return resultadoAgrupado;
 
     } catch (error) {
         console.error("Error en analizarTendencias:", error.response ? error.response.data : error.message);
-        // Retornamos un arreglo vacío en caso de error para no quebrar el frontend
         return []; 
     }
 }
