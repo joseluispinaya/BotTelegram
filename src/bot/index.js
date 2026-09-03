@@ -124,3 +124,5 @@ bot.on('message', async (msg) => {
         bot.sendMessage(chatId, "Ups, ocurrió un error al procesar tu solicitud. Intenta de nuevo más tarde.");
     }
 });
+
+module.exports = bot;
