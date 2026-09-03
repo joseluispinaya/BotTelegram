@@ -3,6 +3,8 @@ const cors = require('cors');
 const env = require('./config/env');
 const adminRoutes = require('./routes/adminRoutes');
 
+const logger = require('./logs/logger');
+
 // Importamos el archivo del bot. 
 // Al hacer require, el código de index.js se ejecuta y el bot comienza a escuchar.
 require('./bot/index');
@@ -25,6 +27,5 @@ app.get('/ping', (req, res) => {
 
 // --- INICIAR SERVIDOR ---
 app.listen(env.server.port, () => {
-    console.log(`Servidor Express ejecutándose en http://localhost:${env.server.port}`);
-    console.log(`API Admin disponible en http://localhost:${env.server.port}/api/admin/...`);
+    logger.info(`Servidor Express ejecutándose en http://localhost:${env.server.port}`);
 });
