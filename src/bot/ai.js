@@ -43,7 +43,7 @@ async function generarRespuestaIA(mensajeUsuario) {
 
         const { data } = await axios.post("https://api.openai.com/v1/chat/completions",
             {
-                model: "gpt-3.5-turbo",
+                model: "gpt-6-luna",
                 messages: messages,
                 temperature: 0.3 // Baja temperatura para mayor precisión
             },
@@ -101,7 +101,7 @@ async function analizarTendencias() {
         // 4. Consultar a OpenAI
         const { data } = await axios.post("https://api.openai.com/v1/chat/completions",
             {
-                model: "gpt-3.5-turbo",
+                model: "gpt-6-luna",
                 messages: [
                     { role: 'system', content: promptSistema },
                     { role: 'user', content: `Mensajes a analizar: ${listaMensajes}` }
