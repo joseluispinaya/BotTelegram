@@ -45,7 +45,7 @@ async function generarRespuestaIA(mensajeUsuario) {
             {
                 model: "gpt-6-luna",
                 messages: messages,
-                temperature: 0.3 // Baja temperatura para mayor precisión
+                //temperature: 0.3
             },
             {
                 headers: {
@@ -106,7 +106,7 @@ async function analizarTendencias() {
                     { role: 'system', content: promptSistema },
                     { role: 'user', content: `Mensajes a analizar: ${listaMensajes}` }
                 ],
-                temperature: 0.1 
+                //temperature: 0.1 
             },
             {
                 headers: {
