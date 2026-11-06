@@ -47,8 +47,11 @@ notificacionesController.enviarMasivo = async (req, res) => {
     const { tipo, url, texto } = req.body; // El texto es opcional (para links o descripciones)
     
     try {
-        // 1. Obtener todos los IDs de los usuarios
-        const { data: usuarios, error } = await supabase.from('usuarios').select('telegram_id');
+        // 1. Obtener SOLO los IDs de los usuarios ACTIVOS
+        const { data: usuarios, error } = await supabase.from('usuarios')
+            .select('telegram_id')
+            .eq('activo', true); // <--- FILTRO DE SEGURIDAD
+
         if (error) throw error;
 
         let enviados = 0;
@@ -68,8 +71,19 @@ notificacionesController.enviarMasivo = async (req, res) => {
                 enviados++;
                 await sleep(50); // Pausa de 50ms para respetar el límite de Telegram
             } catch (err) {
-                console.error(`Error enviando a ${usuario.telegram_id}:`, err.message);
                 fallidos++;
+
+                const errorMessage = err.response && err.response.body ? err.response.body.description : err.message;
+                console.error(`Error enviando a ${usuario.telegram_id}:`, errorMessage);
+
+                if (errorMessage.includes('chat not found') || errorMessage.includes('bot was blocked')) {
+                    console.log(`Desactivando a ${usuario.telegram_id} por bloqueo.`);
+                    
+                    // BAJA LÓGICA: En lugar de delete(), actualizamos el estado
+                    await supabase.from('usuarios')
+                        .update({ activo: false })
+                        .eq('telegram_id', usuario.telegram_id);
+                }
             }
         }
 
